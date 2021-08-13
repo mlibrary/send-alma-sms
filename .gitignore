@@ -1,0 +1,9 @@
+send_sms.pl
+process-sms.sh
+.env
+.bundle/
+coverage/
+.irb_history
+.byebug_history
+processed/
+tmp/
