@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build image
-      run: docker build -f Dockerfile.prod . --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+      run: docker build -f Dockerfile . --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
     - name: Log into registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
     - name: Push image
