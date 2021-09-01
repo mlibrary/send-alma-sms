@@ -19,7 +19,7 @@ require 'webmock/rspec'
 require 'simplecov'
 SimpleCov.start
 
-require File.expand_path '../../send-alma-sms.rb', __FILE__
+require File.expand_path '../../lib/send-alma-sms.rb', __FILE__
 RSpec.configure do |config|
   # rspec-expectations config goes here. You can use an alternate
   # assertion/expectation library such as wrong or the stdlib/minitest
