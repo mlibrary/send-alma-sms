@@ -25,14 +25,19 @@ docker-compose run --rm web bundle exec ruby set-up-test-folder.rb
 ```
 6. Run the test script that doesn't send any SMS messages
 ```
-docker-compose run --rm web bundle exec ruby send-alma-sms.rb --nosend
+docker-compose run --rm web bundle exec ruby send-alma-sms.rb --nosend --nosftp
 ```
 
 ## Further Context
 To actually send SMS messages you'll need to:
 1. Change the twilio values in `.env` to real twilio values 
 2. Change the phone number in `tmp/test_files/Ful_somefile.txt` to a real value 
-3. Run the `send-alma-sms.rb` without the `--nosend` flag.
+3. Run the `send-alma-sms.rb` without the `--nosend` flag. (But still with the `--nosftp`)
+
+To run the script with data from a remote serve you need to set up the environment variables appropriately.
+That is, the `SMS_DIR` and `PROCESSED_SMS_DIR` need to exist on the remote machine, and you need the `HOST`, `USER`, and `KEY`
+
+`KEY` is the base64 encoded private ssh key. Use: `cat your_private_key_file | base64 -w 0`
 
 ## Tests
 To run the test suite:

@@ -21,7 +21,7 @@ class Processor
   end
   def run
     @logger.info("Started Processing SMS messages")
-    files = @sftp.dir.glob(@input_directory, "**/*").filter_map{|x| "#{@input_directory}#{x.name}" if x.file?}
+    files = @sftp.dir.glob(@input_directory, "**/*").filter_map{|x| "#{@input_directory}/#{x.name}" if x.file?}
     sms_files = files.select{|f| f.match(/Ful/)}
     sms_files.each do | file |
       @logger.info("Processing #{file}")
@@ -75,7 +75,28 @@ class FakeTwilioClient
   end
   class Messages
     def create(to:,body:,messaging_service_sid:)
-      { to: to, body: body, messaging_service_sid: messaging_service_sid} 
+      OpenStruct.new( to: to, body: body, messaging_service_sid: messaging_service_sid, status: 'OK') 
+    end
+  end
+end
+
+class FakeSftp
+  def dir
+    FakeDir.new
+  end
+  def download!(file_path)
+    File.read(file_path)
+  end
+  def rename(input, output)
+    FileUtils.mv(input, output)
+  end
+  class FakeDir
+    def glob(*args)
+      FileUtils.cd(args[0]) do
+        Dir.glob(args[1]).map do |file|
+          OpenStruct.new(name: file, file?: !File.directory?(file) )
+        end
+      end
     end
   end
 end

@@ -19,9 +19,9 @@ describe Processor do
     files = ['FulSomeFile', 'FulSomeOtherFile', 'some_wrong_file'].map{|x| double('SFTP::Name', name: x, file?: true) }
     allow(@sftp_dir).to receive(:glob).and_return(files)
     allow(@sftp).to receive("download!").and_return(File.read('./spec/sample_message.txt'))
-    expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}FulSomeFile")
-    expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}FulSomeOtherFile")
-    expect(@logger_double).not_to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}some_wrong_file")
+    expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/FulSomeFile")
+    expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/FulSomeOtherFile")
+    expect(@logger_double).not_to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/some_wrong_file")
     subject
 
   end
