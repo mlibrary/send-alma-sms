@@ -1,53 +1,31 @@
 describe Processor do
-  def total_files_in(directory)
-    Dir[File.join(directory,'**','*')].count{|file| File.file?(file)}
-  end
   before(:each) do
-    current_directory = Dir.pwd
-    @files_directory = "#{current_directory}/send-alma-sms-tests"
-    @processed_directory = "#{current_directory}/send-alma-sms-tests-processed"
-    `mkdir #{@files_directory}`
-    `mkdir #{@processed_directory}`
-
-    @sample_message_path = "#{current_directory}/spec/sample_message.txt"
+    @sftp_dir = double('SFTP::Dir', glob: nil)
+    @sftp_file = double('SFTP::File', "download"=> nil)
+    @sftp = double('SFTP', file: @sftp_file, dir: @sftp_dir, rename: nil, download!: nil)
     twilio_response = double('TwilioClient', status: 'success', to: 'someone', body: 'body')
     @sender_double = instance_double(Sender, send: twilio_response)
     @logger_double = instance_double(Logger, info: nil, error: nil)
   end
-  after(:each) do
-    `rm -r #{@files_directory}`
-    `rm -r #{@processed_directory}`
-  end
   subject do
-    described_class.new(input_directory: @files_directory, output_directory: @processed_directory, sender: @sender_double, logger: @logger_double).run
+    described_class.new(sftp: @sftp, sender: @sender_double, logger: @logger_double).run
   end
-  it "moves file to processed directory" do
-    `cp #{@sample_message_path} #{@files_directory}/FulSomeFile.txt`
+  it "skips files that don't start with Ful" do
+    allow(@sftp_dir).to receive(:glob).and_return([double('SFTP::Name', name: 'some_wrong_file', file?: true)])
+    expect(@logger_double).to receive(:info).with("Finished Processing SMS Messages")
     subject
-    expect(total_files_in(@files_directory)).to eq(0)
-    expect(total_files_in(@processed_directory)).to eq(1)
   end
-  it "handles folders of files" do
-    `mkdir #{@files_directory}/kind_of_message`
-    `cp #{@sample_message_path} #{@files_directory}/kind_of_message/FulSomeFile.txt`
+  it "processes files that do start with Ful" do
+    files = ['FulSomeFile', 'FulSomeOtherFile', 'some_wrong_file'].map{|x| double('SFTP::Name', name: x, file?: true) }
+    allow(@sftp_dir).to receive(:glob).and_return(files)
+    allow(@sftp).to receive("download!").and_return(File.read('./spec/sample_message.txt'))
+    expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}FulSomeFile")
+    expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}FulSomeOtherFile")
+    expect(@logger_double).not_to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}some_wrong_file")
     subject
-    expect(total_files_in(@files_directory)).to eq(0)
-    expect(total_files_in(@processed_directory)).to eq(1)
+
   end
-  it "ignores files that don't start with Full" do
-    `cp #{@sample_message_path} #{@files_directory}/wrong_name.txt`
-    subject
-    expect(total_files_in(@files_directory)).to eq(1)
-    expect(total_files_in(@processed_directory)).to eq(0)
-  end
-  it "sends the messages for each file" do
-    `cp #{@sample_message_path} #{@files_directory}/FulSomeFile.txt`
-    `mkdir #{@files_directory}/kind_of_message`
-    `cp #{@sample_message_path} #{@files_directory}/kind_of_message/FulSomeOtherFile.txt`
-    expect(@sender_double).to receive(:send).twice
-    subject
-    expect(total_files_in(@processed_directory)).to eq(2)
-  end
+
 end
 describe Sender do
   before(:each) do

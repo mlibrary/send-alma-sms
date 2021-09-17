@@ -6,11 +6,14 @@ require 'logger'
 require 'byebug'
 
 class Processor
-  def initialize(input_directory: ENV.fetch("SMS_DIR"), 
+  def initialize(
+                 sftp:,
+                 input_directory: ENV.fetch("SMS_DIR"), 
                  output_directory: ENV.fetch("PROCESSED_SMS_DIR"),
                  sender: Sender.new, 
                  logger: Logger.new(STDOUT)
                 )
+    @sftp = sftp
     @input_directory = input_directory
     @output_directory = output_directory
     @sender = sender
@@ -18,23 +21,18 @@ class Processor
   end
   def run
     @logger.info("Started Processing SMS messages")
-    FileUtils.cd(@input_directory) do
-      #get all files in the given directory
-      files = Dir.glob("**/*").reject { |f| File.directory?(f) }
-      sms_files = files.select{|f| f.match(/Ful/)}
-      @logger.info("No files to process") if sms_files.empty?
-
-      sms_files.each do | file |
-        @logger.info("Processing #{file}")
-        message = Message.new(File.read(file)) 
-        if !message.valid_phone_number?
-          @logger.error("Invalid phone number")
-          next
-        end
-        response = @sender.send(message)
-        @logger.info("status: #{response.status}, to: #{response.to}, body: #{response.body}")
-        FileUtils.mv(file, @output_directory)
+    files = @sftp.dir.glob(@input_directory, "**/*").filter_map{|x| "#{@input_directory}#{x.name}" if x.file?}
+    sms_files = files.select{|f| f.match(/Ful/)}
+    sms_files.each do | file |
+      @logger.info("Processing #{file}")
+      message = Message.new(@sftp.download!(file)) 
+      if !message.valid_phone_number?
+        @logger.error("Invalid phone number")
+        next
       end
+      response = @sender.send(message)
+      @logger.info("status: #{response.status}, to: #{response.to}, body: #{response.body}")
+      @sftp.rename(file, "#{@output_directory}/#{File.basename(file)}")
     end
     @logger.info("Finished Processing SMS Messages")
   end
