@@ -4,6 +4,7 @@ require 'telephone_number'
 require 'fileutils'
 require 'logger'
 require 'byebug'
+require 'httparty'
 
 class Processor
   def initialize(
@@ -23,18 +24,23 @@ class Processor
     @logger.info("Started Processing SMS messages")
     files = @sftp.dir.glob(@input_directory, "**/*").filter_map{|x| "#{@input_directory}/#{x.name}" if x.file?}
     sms_files = files.select{|f| f.match(/Ful/)}
+    summary = { total_files: sms_files.count, num_files_sent: 0, num_files_not_sent: 0}
     sms_files.each do | file |
       @logger.info("Processing #{file}")
       message = Message.new(@sftp.download!(file)) 
       if !message.valid_phone_number?
-        @logger.error("Invalid phone number")
+        @logger.error("Invalid phone number for #{File.basename(file)}")
+        @sftp.rename(file, "#{@output_directory}/#{File.basename(file)}")
+        summary[:num_files_not_sent] = summary[:num_files_not_sent] + 1
         next
       end
       response = @sender.send(message)
       @logger.info("status: #{response.status}, to: #{response.to}, body: #{response.body}")
       @sftp.rename(file, "#{@output_directory}/#{File.basename(file)}")
+      summary[:num_files_sent] = summary[:num_files_sent] + 1
     end
     @logger.info("Finished Processing SMS Messages")
+    HTTParty.post(ENV.fetch('SLACK_URL'), body: {text: "Finished processing sms messages\n#{summary}"}.to_json)
   end
    
 end

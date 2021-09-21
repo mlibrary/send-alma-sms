@@ -6,6 +6,8 @@ gem 'telephone_number'
 gem 'net-sftp'
 gem 'bcrypt_pbkdf'
 gem 'ed25519'
+gem 'httparty'
+gem 'webmock'
 
 group :development, :test do
   gem 'rspec'

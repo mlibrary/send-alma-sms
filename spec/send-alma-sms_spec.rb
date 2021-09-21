@@ -6,6 +6,7 @@ describe Processor do
     twilio_response = double('TwilioClient', status: 'success', to: 'someone', body: 'body')
     @sender_double = instance_double(Sender, send: twilio_response)
     @logger_double = instance_double(Logger, info: nil, error: nil)
+    stub_request(:post, ENV.fetch('SLACK_URL'))
   end
   subject do
     described_class.new(sftp: @sftp, sender: @sender_double, logger: @logger_double).run
