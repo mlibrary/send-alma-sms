@@ -39,13 +39,12 @@ describe Sender do
     described_class.new(@client_double)
   end
   context "#send" do
-    it "uses and Message object and sends message with twilio" do
+    it "uses a Message object and sends message with twilio" do
       expect(@messages_double).to receive(:create)
       expect(@message).to receive(:to)
       expect(@message).to receive(:body)
       subject.send(@message)
     end
-    it "exists with invalid phone number"
   end
 end
 describe Message do

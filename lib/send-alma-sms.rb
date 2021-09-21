@@ -22,7 +22,7 @@ class Processor
   end
   def run
     @logger.info("Started Processing SMS messages")
-    files = @sftp.dir.glob(@input_directory, "**/*").filter_map{|x| "#{@input_directory}/#{x.name}" if x.file?}
+    files = @sftp.dir.glob(@input_directory, "**").filter_map{|x| "#{@input_directory}/#{x.name}" if x.file?}
     sms_files = files.select{|f| f.match(/Ful/)}
     summary = { total_files: sms_files.count, num_files_sent: 0, num_files_not_sent: 0}
     sms_files.each do | file |
