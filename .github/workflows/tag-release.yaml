@@ -42,3 +42,5 @@ jobs:
         cluster_server: https://hatcher.kubernetes.lib.umich.edu
         namespace_token: ${{ secrets.HATCHER_TOKEN }}
         namespace: ${{ secrets.NAMESPACE }}
+        type: cronjob
+        cronjob_name: send-alma-sms
