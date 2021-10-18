@@ -33,7 +33,7 @@ jobs:
         docker push $PROD_IMAGE_ID:${{ env.TAG }}
         docker push $PROD_IMAGE_ID:latest
     - name: Deploy to production
-      uses: mlibrary/deploy-to-kubernetes@v1
+      uses: mlibrary/deploy-to-kubernetes@v1.1
       with:
         github_username: ${{ github.actor }}
         github_token: ${{ secrets.GITHUB_TOKEN }}
