@@ -7,3 +7,4 @@ coverage/
 .byebug_history
 processed/
 tmp/
+.bash_history
