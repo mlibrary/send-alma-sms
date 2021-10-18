@@ -30,13 +30,13 @@ class Processor
       message = Message.new(@sftp.download!(file)) 
       if !message.valid_phone_number?
         @logger.error("Invalid phone number for #{File.basename(file)}")
-        @sftp.rename(file, "#{@output_directory}/#{File.basename(file)}")
+        @sftp.rename!(file, "#{@output_directory}/#{File.basename(file)}")
         summary[:num_files_not_sent] = summary[:num_files_not_sent] + 1
         next
       end
       response = @sender.send(message)
       @logger.info("status: #{response.status}, to: #{response.to}, body: #{response.body}")
-      @sftp.rename(file, "#{@output_directory}/#{File.basename(file)}")
+      @sftp.rename!(file, "#{@output_directory}/#{File.basename(file)}")
       summary[:num_files_sent] = summary[:num_files_sent] + 1
     end
     @logger.info("Finished Processing SMS Messages")
@@ -93,7 +93,7 @@ class FakeSftp
   def download!(file_path)
     File.read(file_path)
   end
-  def rename(input, output)
+  def rename!(input, output)
     FileUtils.mv(input, output)
   end
   class FakeDir

@@ -2,7 +2,7 @@ describe Processor do
   before(:each) do
     @sftp_dir = double('SFTP::Dir', glob: nil)
     @sftp_file = double('SFTP::File', "download"=> nil)
-    @sftp = double('SFTP', file: @sftp_file, dir: @sftp_dir, rename: nil, download!: nil)
+    @sftp = double('SFTP', file: @sftp_file, dir: @sftp_dir, rename!: nil, download!: nil)
     twilio_response = double('TwilioClient', status: 'success', to: 'someone', body: 'body')
     @sender_double = instance_double(Sender, send: twilio_response)
     @logger_double = instance_double(Logger, info: nil, error: nil)
