@@ -13,7 +13,7 @@ describe Processor do
   end
   it "skips files that don't start with Ful" do
     allow(@sftp_dir).to receive(:glob).and_return([double('SFTP::Name', name: 'some_wrong_file', file?: true)])
-    expect(@logger_double).to receive(:info).with("Finished Processing SMS Messages")
+    expect(@logger_double).to receive(:info).with("Finished Processing SMS Messages\n{:total_files=>0, :num_files_sent=>0, :num_files_not_sent=>0, :total_files_in_input_directory_after_script=>0}")
     subject
   end
   it "processes files that do start with Ful" do
