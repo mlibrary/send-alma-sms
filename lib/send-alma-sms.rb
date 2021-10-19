@@ -22,10 +22,9 @@ class Processor
   end
   def run
     @logger.info("Started Processing SMS messages")
-    files = @sftp.dir.glob(@input_directory, "**").filter_map{|x| "#{@input_directory}/#{x.name}" if x.file?}
-    sms_files = files.select{|f| f.match(/Ful/)}
-    summary = { total_files: sms_files.count, num_files_sent: 0, num_files_not_sent: 0}
-    sms_files.each do | file |
+    starting_files = sms_files
+    summary = { total_files: starting_files.count, num_files_sent: 0, num_files_not_sent: 0}
+    starting_files.each do | file |
       @logger.info("Processing #{file}")
       message = Message.new(@sftp.download!(file)) 
       if !message.valid_phone_number?
@@ -39,8 +38,15 @@ class Processor
       @sftp.rename!(file, "#{@output_directory}/#{File.basename(file)}")
       summary[:num_files_sent] = summary[:num_files_sent] + 1
     end
-    @logger.info("Finished Processing SMS Messages")
+    summary[:total_files_in_input_directory_after_script] = sms_files.count
+    @logger.info("Finished Processing SMS Messages\n#{summary}")
     HTTParty.post(ENV.fetch('SLACK_URL'), body: {text: "Finished processing sms messages\n#{summary}"}.to_json)
+  end
+
+  private
+  def sms_files
+    files = @sftp.dir.glob(@input_directory, "**").filter_map{|x| "#{@input_directory}/#{x.name}" if x.file?}
+    files.select{|f| f.match(/Ful/)}
   end
    
 end
