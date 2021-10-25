@@ -40,7 +40,12 @@ class Processor
     end
     summary[:total_files_in_input_directory_after_script] = sms_files.count
     @logger.info("Finished Processing SMS Messages\n#{summary}")
-    HTTParty.post(ENV.fetch('SLACK_URL'), body: {text: "Finished processing sms messages\n#{summary}"}.to_json)
+    begin
+      HTTParty.get(ENV.fetch('PUSHMON_URL'))
+    rescue
+      Rails.logger.error("Failed to contact Pushmon")
+    end
+    #HTTParty.post(ENV.fetch('SLACK_URL'), body: {text: "Finished processing sms messages\n#{summary}"}.to_json)
   end
 
   private
