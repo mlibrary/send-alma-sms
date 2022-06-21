@@ -12,3 +12,4 @@ tmp/
 !.ssh/README.md
 sftp/ssh/*
 !sftp/ssh/README.md
+gh_package_key
