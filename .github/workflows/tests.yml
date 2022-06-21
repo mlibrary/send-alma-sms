@@ -16,5 +16,7 @@ jobs:
         with:
           ruby-version: 3.0.2
           bundler-cache: true
+        env: 
+          BUNDLE_RUBYGEMS__PKG__GITHUB__COM: ${{secrets.GH_PACKAGE_READ_TOKEN}}
       - name: Run tests
         run: bundle exec rspec

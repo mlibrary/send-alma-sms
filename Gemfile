@@ -7,7 +7,10 @@ gem 'net-sftp'
 gem 'bcrypt_pbkdf'
 gem 'ed25519'
 gem 'httparty'
-gem 'webmock'
+
+source "https://rubygems.pkg.github.com/mlibrary" do
+  gem "sftp"
+end
 
 group :development, :test do
   gem 'rspec'

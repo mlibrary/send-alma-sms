@@ -24,3 +24,7 @@ USER $UNAME
 ENV BUNDLE_PATH /gems
 
 WORKDIR /app
+
+RUN bundle install
+COPY --chown=${UID}:${GID} . /app
+

@@ -8,3 +8,7 @@ coverage/
 processed/
 tmp/
 .bash_history
+.ssh/*
+!.ssh/README.md
+sftp/ssh/*
+!sftp/ssh/README.md
