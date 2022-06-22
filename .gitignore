@@ -13,3 +13,5 @@ tmp/
 sftp/ssh/*
 !sftp/ssh/README.md
 gh_package_key
+.cache/
+

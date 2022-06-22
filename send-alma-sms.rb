@@ -1,6 +1,6 @@
 #! /usr/local/bin/ruby
-require_relative './lib/send-alma-sms'
-require 'optparse'
+require_relative "./lib/send-alma-sms"
+require "optparse"
 
 params = {}
 OptionParser.new do |opts|
@@ -10,4 +10,3 @@ inputs = {}
 inputs[:sender] = Sender.new(FakeTwilioClient.new) if params[:nosend]
 
 Processor.new(**inputs).run
-
