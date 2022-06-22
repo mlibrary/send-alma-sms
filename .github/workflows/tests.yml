@@ -18,5 +18,7 @@ jobs:
           bundler-cache: true
         env: 
           BUNDLE_RUBYGEMS__PKG__GITHUB__COM: ${{secrets.GH_PACKAGE_READ_TOKEN}}
+      - name: Run linter for Ruby
+        run: bundle exec standardrb
       - name: Run tests
         run: bundle exec rspec
