@@ -107,27 +107,3 @@ class FakeTwilioClient
     end
   end
 end
-
-class FakeSftp
-  def dir
-    FakeDir.new
-  end
-
-  def download!(file_path)
-    File.read(file_path)
-  end
-
-  def rename!(input, output)
-    FileUtils.mv(input, output)
-  end
-
-  class FakeDir
-    def glob(*args)
-      FileUtils.cd(args[0]) do
-        Dir.glob(args[1]).map do |file|
-          OpenStruct.new(name: file, file?: !File.directory?(file))
-        end
-      end
-    end
-  end
-end
