@@ -12,24 +12,19 @@ describe Processor do
   end
   it "skips files that don't start with Ful" do
     allow(@sftp).to receive(:ls).and_return(["sms/some_wrong_file"])
-    expect(@logger_double).to receive(:info).with("Finished Processing SMS Messages\n{:total_files=>0, :num_files_sent=>0, :num_files_not_sent=>0, :total_files_in_input_directory_after_script=>0}")
+    expect(@logger_double).to receive(:info).with("Finished Processing SMS Messages\n{:total_files=>0, :num_files_sent=>0, :num_files_not_sent=>0, :num_files_error=>0}")
     subject
   end
   it "processes files that do start with Ful" do
     my_files = ["FulSomeFile", "FulSomeOtherFile", "some_wrong_file"]
     allow(@sftp).to receive(:ls).and_return(my_files.map { |x| "sms/#{x}" })
     allow(@file_class).to receive(:read).and_return(File.read("./spec/sample_message.txt"))
-    allow(@file_class).to receive(:basename).and_return("FulSomeFile", "FulSomeOtherFile")
-    allow(@file_class).to receive(:delete)
 
     expect(@sftp).to receive(:get).with("sms/FulSomeFile", "/app/scratch/FulSomeFile")
     expect(@sftp).to receive(:get).with("sms/FulSomeOtherFile", "/app/scratch/FulSomeOtherFile")
     expect(@sftp).not_to receive(:get).with("sms/some_wrong_file", "/app/scratch/some_wrong_file")
     expect(@sftp).to receive(:rename).with("sms/FulSomeFile", "sms/processed/FulSomeFile")
     expect(@sftp).to receive(:rename).with("sms/FulSomeOtherFile", "sms/processed/FulSomeOtherFile")
-
-    expect(@file_class).to receive(:delete).with("/app/scratch/FulSomeFile")
-    expect(@file_class).to receive(:delete).with("/app/scratch/FulSomeOtherFile")
 
     expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/FulSomeFile")
     expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/FulSomeOtherFile")

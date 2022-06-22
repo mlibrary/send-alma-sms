@@ -3,7 +3,6 @@ require "twilio-ruby"
 require "telephone_number"
 require "fileutils"
 require "logger"
-require "httparty"
 require "sftp"
 
 class Processor
@@ -13,7 +12,8 @@ class Processor
     output_directory: ENV.fetch("PROCESSED_SMS_DIR"),
     sender: Sender.new,
     logger: Logger.new($stdout),
-    file_class: File
+    file_class: File,
+    sms_file_class: SMSFile
   )
     @sftp = sftp
     @input_directory = input_directory
@@ -21,43 +21,60 @@ class Processor
     @sender = sender
     @logger = logger
     @file_class = file_class
+    @sms_file_class = sms_file_class
   end
 
   def run
     @logger.info("Started Processing SMS messages")
-    starting_files = sms_files
-    summary = {total_files: starting_files.count, num_files_sent: 0, num_files_not_sent: 0}
-    starting_files.each do |file|
+    summary = {total_files: sms_files.count, num_files_sent: 0, num_files_not_sent: 0, num_files_error: 0}
+    sms_files.each do |file|
       @logger.info("Processing #{file}")
-      base_file = @file_class.basename(file)
-      @sftp.get(file, "/app/scratch/#{base_file}")
-      message = Message.new(@file_class.read("/app/scratch/#{base_file}"))
-      if !message.valid_phone_number?
-        @logger.error("Invalid phone number for #{base_file}")
-        @sftp.rename(file, "sms/processed/#{base_file}")
-        @file_class.delete("/app/scratch/#{base_file}")
+      sms_file = @sms_file_class.new(file)
+      @sftp.get(sms_file.remote_file, sms_file.scratch_path)
+      message = Message.new(@file_class.read(sms_file.scratch_path))
+
+      begin
+        response = @sender.send(message)
+        @logger.info("status: #{response.status}, to: #{response.to}, body: #{response.body}")
+        summary[:num_files_sent] = summary[:num_files_sent] + 1
+      rescue Twilio::REST::TwilioError => e
+        error_message(sms_file: sms_file, error: e)
         summary[:num_files_not_sent] = summary[:num_files_not_sent] + 1
-        next
+        summary[:num_files_error] = summary[:num_files_error] + 1
+        next # don't rename remotely
+      rescue => e
+        error_message(sms_file: sms_file, error: e)
+        summary[:num_files_error] = summary[:num_files_error] + 1
       end
-      response = @sender.send(message)
-      @logger.info("status: #{response.status}, to: #{response.to}, body: #{response.body}")
-      @sftp.rename(file, "sms/processed/#{base_file}")
-      @file_class.delete("/app/scratch/#{base_file}")
-      summary[:num_files_sent] = summary[:num_files_sent] + 1
+      @sftp.rename(sms_file.remote_file, sms_file.proccessed_path)
     end
-    summary[:total_files_in_input_directory_after_script] = sms_files.count
     @logger.info("Finished Processing SMS Messages\n#{summary}")
-    begin
-      HTTParty.get(ENV.fetch("PUSHMON_URL"))
-    rescue
-      @logger.error("Failed to contact Pushmon")
-    end
   end
 
   private
 
+  def error_message(sms_file:, error:)
+    @logger.error("For file: #{sms_file.base_name}: #{error.message}")
+  end
+
   def sms_files
-    @sftp.ls(@input_directory).select { |f| f.match(/Ful/) }
+    @sms_files ||= @sftp.ls(@input_directory).select { |f| f.match(/Ful/) }
+  end
+end
+
+class SMSFile
+  attr_reader :remote_file, :base_name
+  def initialize(remote_file)
+    @remote_file = remote_file
+    @base_name = File.basename(remote_file)
+  end
+
+  def scratch_path
+    "/app/scratch/#{@base_name}"
+  end
+
+  def proccessed_path
+    "sms/processed/#{@base_name}"
   end
 end
 
