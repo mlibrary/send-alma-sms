@@ -2,9 +2,6 @@ source 'https://rubygems.org'
 
 gem 'twilio-ruby', '~> 5.58.0'
 gem 'telephone_number'
-gem 'net-sftp'
-gem 'bcrypt_pbkdf'
-gem 'ed25519'
 gem 'httparty'
 
 source "https://rubygems.pkg.github.com/mlibrary" do

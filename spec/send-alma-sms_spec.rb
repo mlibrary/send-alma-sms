@@ -1,25 +1,37 @@
 describe Processor do
   before(:each) do
-    @sftp_dir = double('SFTP::Dir', glob: nil)
-    @sftp_file = double('SFTP::File', "download"=> nil)
-    @sftp = double('SFTP', file: @sftp_file, dir: @sftp_dir, rename!: nil, download!: nil)
+    @sftp = instance_double(SFTP::Client, ls: [], get: nil, rename: nil)
+    @file_class = class_double(File)
     twilio_response = double('TwilioClient', status: 'success', to: 'someone', body: 'body')
     @sender_double = instance_double(Sender, send: twilio_response)
     @logger_double = instance_double(Logger, info: nil, error: nil)
     stub_request(:get, ENV.fetch('PUSHMON_URL'))
   end
   subject do
-    described_class.new(sftp: @sftp, sender: @sender_double, logger: @logger_double).run
+    described_class.new(sftp: @sftp, sender: @sender_double, logger: @logger_double, file_class: @file_class).run
   end
   it "skips files that don't start with Ful" do
-    allow(@sftp_dir).to receive(:glob).and_return([double('SFTP::Name', name: 'some_wrong_file', file?: true)])
+    allow(@sftp).to receive(:ls).and_return(['sms/some_wrong_file'])
     expect(@logger_double).to receive(:info).with("Finished Processing SMS Messages\n{:total_files=>0, :num_files_sent=>0, :num_files_not_sent=>0, :total_files_in_input_directory_after_script=>0}")
     subject
   end
   it "processes files that do start with Ful" do
-    files = ['FulSomeFile', 'FulSomeOtherFile', 'some_wrong_file'].map{|x| double('SFTP::Name', name: x, file?: true) }
-    allow(@sftp_dir).to receive(:glob).and_return(files)
-    allow(@sftp).to receive("download!").and_return(File.read('./spec/sample_message.txt'))
+    my_files = ['FulSomeFile', 'FulSomeOtherFile', 'some_wrong_file']
+    allow(@sftp).to receive(:ls).and_return(my_files.map{|x| "sms/#{x}"})
+    allow(@file_class).to receive(:read).and_return(File.read('./spec/sample_message.txt'))
+    allow(@file_class).to receive(:basename).and_return("FulSomeFile", "FulSomeOtherFile")
+    allow(@file_class).to receive(:delete)
+
+    expect(@sftp).to receive(:get).with("sms/FulSomeFile","/app/scratch/FulSomeFile")
+    expect(@sftp).to receive(:get).with("sms/FulSomeOtherFile","/app/scratch/FulSomeOtherFile")
+    expect(@sftp).not_to receive(:get).with("sms/some_wrong_file","/app/scratch/some_wrong_file")
+    expect(@sftp).to receive(:rename).with("sms/FulSomeFile","sms/processed/FulSomeFile")
+    expect(@sftp).to receive(:rename).with("sms/FulSomeOtherFile","sms/processed/FulSomeOtherFile")
+
+    expect(@file_class).to receive(:delete).with("/app/scratch/FulSomeFile")
+    expect(@file_class).to receive(:delete).with("/app/scratch/FulSomeOtherFile")
+
+
     expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/FulSomeFile")
     expect(@logger_double).to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/FulSomeOtherFile")
     expect(@logger_double).not_to receive(:info).with("Processing #{ENV.fetch("SMS_DIR")}/some_wrong_file")

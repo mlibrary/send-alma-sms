@@ -3,22 +3,24 @@ require 'twilio-ruby'
 require 'telephone_number'
 require 'fileutils'
 require 'logger'
-require 'byebug'
 require 'httparty'
+require 'sftp'
 
 class Processor
   def initialize(
-                 sftp:,
+                 sftp: SFTP.client,
                  input_directory: ENV.fetch("SMS_DIR"), 
                  output_directory: ENV.fetch("PROCESSED_SMS_DIR"),
                  sender: Sender.new, 
-                 logger: Logger.new(STDOUT)
+                 logger: Logger.new(STDOUT),
+                 file_class: File
                 )
     @sftp = sftp
     @input_directory = input_directory
     @output_directory = output_directory
     @sender = sender
     @logger = logger
+    @file_class = file_class
   end
   def run
     @logger.info("Started Processing SMS messages")
@@ -26,16 +28,21 @@ class Processor
     summary = { total_files: starting_files.count, num_files_sent: 0, num_files_not_sent: 0}
     starting_files.each do | file |
       @logger.info("Processing #{file}")
-      message = Message.new(@sftp.download!(file)) 
+      base_file = @file_class.basename(file)
+      @sftp.get(file, "/app/scratch/#{base_file}") 
+      message = Message.new(@file_class.read("/app/scratch/#{base_file}")) 
       if !message.valid_phone_number?
-        @logger.error("Invalid phone number for #{File.basename(file)}")
-        @sftp.rename!(file, "#{@output_directory}/#{File.basename(file)}")
+        @logger.error("Invalid phone number for #{base_file}")
+        @sftp.rename(file, "sms/processed/#{base_file}")
+        @file_class.delete("/app/scratch/#{base_file}")
         summary[:num_files_not_sent] = summary[:num_files_not_sent] + 1
         next
       end
       response = @sender.send(message)
       @logger.info("status: #{response.status}, to: #{response.to}, body: #{response.body}")
-      @sftp.rename!(file, "#{@output_directory}/#{File.basename(file)}")
+      @sftp.rename(file, "sms/processed/#{base_file}")
+      @file_class.delete("/app/scratch/#{base_file}")
+      summary
       summary[:num_files_sent] = summary[:num_files_sent] + 1
     end
     summary[:total_files_in_input_directory_after_script] = sms_files.count
@@ -43,15 +50,13 @@ class Processor
     begin
       HTTParty.get(ENV.fetch('PUSHMON_URL'))
     rescue
-      Rails.logger.error("Failed to contact Pushmon")
+      @logger.error("Failed to contact Pushmon")
     end
-    #HTTParty.post(ENV.fetch('SLACK_URL'), body: {text: "Finished processing sms messages\n#{summary}"}.to_json)
   end
 
   private
   def sms_files
-    files = @sftp.dir.glob(@input_directory, "**").filter_map{|x| "#{@input_directory}/#{x.name}" if x.file?}
-    files.select{|f| f.match(/Ful/)}
+    @sftp.ls(@input_directory).select{|f| f.match(/Ful/)}
   end
    
 end
