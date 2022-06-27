@@ -49,6 +49,7 @@ class Processor
       @sftp.rename(sms_file.remote_file, sms_file.proccessed_path)
     end
     @logger.info("Finished Processing SMS Messages\n#{summary}")
+    summary
   end
 
   private
