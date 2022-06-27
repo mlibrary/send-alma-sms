@@ -1,37 +1,33 @@
-require_relative './lib/send-alma-sms'
-require 'optparse'
-require 'net/sftp'
-require 'ed25519'
-require 'bcrypt_pbkdf'
-require 'base64'
+#! /usr/local/bin/ruby
+require_relative "./lib/send-alma-sms"
+require "optparse"
+require "yabeda"
+require "yabeda/prometheus"
 
-params = {}
-OptionParser.new do |opts|
-  opts.on("--nosend")
-  opts.on("--nosftp")
-end.parse!(into: params)
-inputs = {}
-inputs[:sender] = Sender.new(FakeTwilioClient.new) if params[:nosend]
-if params[:nosftp]
-  inputs[:sftp] = FakeSftp.new
-else
-  inputs[:sftp] = Net::SFTP.start(ENV.fetch('HOST'), ENV.fetch('USER'),
-                key_data: Base64.decode64(ENV.fetch('KEY') ),
-                keys: [],
-                keys_only: true
-               ) 
+Yabeda.configure do
+  gauge :send_alma_sms_last_success, comment: "Time that Alma sms messages were successfully sent"
+  gauge :send_alma_sms_num_messages_sent, comment: "Number of Alma sms messages sent in a job"
+  gauge :send_alma_sms_num_messages_not_sent, comment: "Number of Alma sms messages that caused an error"
+  gauge :send_alma_sms_num_messages_error, comment: "Number of Alma sms messages that were NOT successfully sent"
 end
-Processor.new(**inputs).run
-#Net::SFTP.start(ENV.fetch('HOST'), ENV.fetch('USER'),
-                #key_data: Base64.decode64(ENV.fetch('KEY') ),
-                #keys: [],
-                #keys_only: true
-                ##, ENV.fetch('PASSWORD')
-               #) do |sftp|
-  #if params["nosend"]
-    #Processor.new(sftp: sftp, sender: Sender.new(FakeTwilioClient.new)).run
-  #else
-    #Processor.new(sftp: sftp).run
-  #end
-#end
+Yabeda.configure!
 
+start_time = Time.now.to_i
+
+inputs = {}
+OptionParser.new do |opts|
+  opts.on("--nosend") do
+    inputs[:sender] = Sender.new(FakeTwilioClient.new)
+  end
+end.parse!
+
+results = Processor.new(**inputs).run
+Yabeda.send_alma_sms_num_messages_sent.set({}, results[:num_files_sent])
+Yabeda.send_alma_sms_num_messages_not_sent.set({}, results[:num_files_not_sent])
+Yabeda.send_alma_sms_num_messages_error.set({}, results[:num_files_error])
+Yabeda.send_alma_sms_last_success.set({}, start_time)
+begin
+  Yabeda::Prometheus.push_gateway.add(Yabeda::Prometheus.registry)
+rescue
+  Logger.new($stdout).error("Failed to contact the push gateway")
+end

@@ -56,14 +56,16 @@ jobs:
       uses: docker/build-push-action@v2
       with:
         context: .
+        file: Dockerfile.prod
         push: true
+        secrets: |
+          "gh_package_read_token=${{ secrets.GH_PACKAGE_READ_TOKEN }}"
         tags: ghcr.io/mlibrary/${{ secrets.IMAGE_NAME }}:${{steps.tag_check.outputs.tag}}
     - name: Deploy to ${{ env.environment }}
-      uses: mlibrary/deploy-to-kubernetes@v1.1
+      uses: mlibrary/deploy-to-kubernetes@v2
       with:
-        github_username: ${{ github.actor }}
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        image: mlibrary/${{ secrets.IMAGE_NAME }}:${{ steps.tag_check.outputs.tag }}
+        registry_token: ${{ secrets.GITHUB_TOKEN }}
+        image: ghcr.io/mlibrary/${{ secrets.IMAGE_NAME }}:${{ steps.tag_check.outputs.tag }}
         cluster_ca: ${{ secrets.HATCHER_CLUSTER_CA }}
         cluster_server: https://hatcher.kubernetes.lib.umich.edu
         namespace_token: ${{ secrets.HATCHER_TOKEN }}

@@ -6,8 +6,24 @@ services:
     volumes:
       - .:/app
       - gem_cache:/gems
+      - ./sftp/ssh/ssh_client_rsa_key:/etc/secret-volume/id_rsa:ro
     env_file:
       - .env
+      - .env-dev-values
+
+  sftp:
+    image: 'atmoz/sftp'
+    volumes:
+      - ./sftp/sms:/home/alma/sms
+      - ./sftp/ssh/ssh_client_rsa_key.pub:/home/alma/.ssh/keys/id_rsa.pub:ro
+      - ./sftp/ssh/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key
+      - ./sftp/ssh/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key
+    command: alma:1001
+
+  pushgateway:
+    image: prom/pushgateway
+    ports:
+      - 9091:9091
 
 volumes:
   gem_cache:

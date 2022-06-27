@@ -11,33 +11,33 @@ The configuration for this cronjob is in the [alma-utilies-kube](https://github.
 ```
 cp .env-example .env
 ```
-3. Build the image
+3. Set the `BUNDLE_RUBYGEMS__PKG__GITHUB__COM` env var to your Github Personal Acess token with package:read scope
+
+4. Build the image
 ```
 docker-compose build
 ```
-4. Bundle install the gems
+5. Bundle install the gems
 ```
 docker-compose run --rm web bundle install
 ```
-5. Set up the test folders
+6. Set up the ssh keys
 ```
-docker-compose run --rm web bundle exec ruby set-up-test-folder.rb
+./set_up_development_ssh_keys.sh
 ```
-6. Run the test script that doesn't send any SMS messages
+7. Set up the sftp folders
 ```
-docker-compose run --rm web bundle exec ruby send-alma-sms.rb --nosend --nosftp
+./set_up_sms_dir.sh
+```
+8. Run the test script that doesn't send any SMS messages
+```
+docker-compose run --rm web bundle exec ruby send-alma-sms.rb --nosend
 ```
 
 ## Further Context
 To actually send SMS messages you'll need to:
 1. Change the twilio values in `.env` to real twilio values 
-2. Change the phone number in `tmp/test_files/Ful_somefile.txt` to a real value 
-3. Run the `send-alma-sms.rb` without the `--nosend` flag. (But still with the `--nosftp`)
-
-To run the script with data from a remote serve you need to set up the environment variables appropriately.
-That is, the `SMS_DIR` and `PROCESSED_SMS_DIR` need to exist on the remote machine, and you need the `HOST`, `USER`, and `KEY`
-
-`KEY` is the base64 encoded private ssh key. Use: `cat your_private_key_file | base64 -w 0`
+2. Run the `send-alma-sms.rb` without the `--nosend` flag. (But still with the `--nosftp`)
 
 ## Tests
 To run the test suite:
