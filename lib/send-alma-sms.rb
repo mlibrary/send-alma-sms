@@ -9,7 +9,6 @@ class Processor
   def initialize(
     sftp: SFTP.client,
     input_directory: ENV.fetch("SMS_DIR"),
-    output_directory: ENV.fetch("PROCESSED_SMS_DIR"),
     sender: Sender.new,
     logger: Logger.new($stdout),
     file_class: File,
@@ -17,7 +16,6 @@ class Processor
   )
     @sftp = sftp
     @input_directory = input_directory
-    @output_directory = output_directory
     @sender = sender
     @logger = logger
     @file_class = file_class
@@ -65,9 +63,10 @@ end
 
 class SMSFile
   attr_reader :remote_file, :base_name
-  def initialize(remote_file)
+  def initialize(remote_file, processed_directory = ENV.fetch("PROCESSED_SMS_DIR"))
     @remote_file = remote_file
     @base_name = File.basename(remote_file)
+    @processed_directory = processed_directory
   end
 
   def scratch_path
@@ -75,7 +74,7 @@ class SMSFile
   end
 
   def proccessed_path
-    "sms/processed/#{@base_name}"
+    "#{@processed_directory}/#{@base_name}"
   end
 end
 
