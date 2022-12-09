@@ -1,6 +1,6 @@
 source "https://rubygems.org"
 
-gem "twilio-ruby", "~> 5.58.0"
+gem "twilio-ruby"
 gem "telephone_number"
 gem "yabeda"
 gem "yabeda-prometheus"
